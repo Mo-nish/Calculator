@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+
+    environment {
+        VENV_PATH = 'venv'
+        SONARQUBE = 'SonarQube' // Jenkins Sonar server name (check Manage Jenkins → Configure System)
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Mo-nish/Calculator.git'
+            }
+        }
+
+        stage('Setup Python Environment') {
+            steps {
+                bat """
+                    python -m venv %VENV_PATH%
+                    call %VENV_PATH%\\Scripts\\activate
+                    pip install --upgrade pip
+                    pip install -r animation-calculator\\backend\\requirements.txt pytest
+                """
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                bat """
+                    call %VENV_PATH%\\Scripts\\activate
+                    pytest animation-calculator\\backend\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
+                """
+            }
+            post {
+                always {
+                    junit 'test-results.xml'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE}") {
+                    bat """
+                        call %VENV_PATH%\\Scripts\\activate
+                        sonar-scanner ^
+                            -Dsonar.projectKey=Calculator ^
+                            -Dsonar.projectName=Calculator ^
+                            -Dsonar.sources=animation-calculator\\backend ^
+                            -Dsonar.python.coverage.reportPaths=test-results.xml ^
+                            -Dsonar.host.url=http://localhost:9000 ^
+                            -Dsonar.login=sqp_3c0a4d26d7baadb4b3d6540b8aa01f4682e3312a
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Pipeline completed successfully!"
+        }
+        failure {
+            echo "❌ Pipeline failed — check console output."
+        }
+    }
+}
