@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         VENV_PATH = 'venv'
-        SONARQUBE = 'SonarQube' // Jenkins Sonar server name
+        SONARQUBE = 'Invensis' // Jenkins Sonar server name - must match Jenkins configuration
     }
 
     stages {
@@ -45,24 +45,11 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    try {
-                        withSonarQubeEnv("${SONARQUBE}") {
-                            bat """
-                                call %VENV_PATH%\\Scripts\\activate
-                                sonar-scanner ^
-                                    -Dsonar.projectKey=Calculator ^
-                                    -Dsonar.projectName=Calculator ^
-                                    -Dsonar.sources=animation-calculator\\backend ^
-                                    -Dsonar.python.coverage.reportPaths=test-results.xml ^
-                                    -Dsonar.host.url=http://localhost:9000 ^
-                                    -Dsonar.login=sqp_3c0a4d26d7baadb4b3d6540b8aa01f4682e3312a
-                            """
-                        }
-                    } catch (Exception e) {
-                        echo "⚠️ SonarQube analysis skipped: ${e.getMessage()}"
-                        echo "⚠️ To enable SonarQube analysis, configure the SonarQube server in Jenkins settings."
-                    }
+                withSonarQubeEnv("${SONARQUBE}") {
+                    bat """
+                        call %VENV_PATH%\\Scripts\\activate
+                        sonar-scanner -Dproject.settings=animation-calculator\\sonar-project.properties
+                    """
                 }
             }
         }
