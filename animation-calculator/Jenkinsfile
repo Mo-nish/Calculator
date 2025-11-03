@@ -46,60 +46,67 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE}") {
-                    script {
-                        // Check if sonar-scanner exists in PATH
-                        def scannerExists = bat(
-                            script: 'where sonar-scanner >nul 2>&1',
-                            returnStatus: true
-                        ) == 0
-                        
-                        def scannerCmd = 'sonar-scanner'
-                        
-                        if (!scannerExists) {
-                            echo "⚠️ sonar-scanner not found in PATH. Setting up..."
-                            bat """
-                                if not exist sonar-scanner (
-                                    echo Downloading SonarQube Scanner...
-                                    powershell -Command "& {Invoke-WebRequest -Uri 'https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-windows.zip' -OutFile 'sonar-scanner.zip'; Expand-Archive -Path 'sonar-scanner.zip' -DestinationPath '.' -Force}"
-                                    for /f "delims=" %%i in ('dir /b /ad sonar-scanner-* 2^>nul') do (
-                                        move "%%i" sonar-scanner
-                                    )
-                                    del sonar-scanner.zip 2>nul
-                                )
-                            """
-                            scannerCmd = "${WORKSPACE}\\sonar-scanner\\bin\\sonar-scanner.bat"
-                        } else {
-                            echo "✅ sonar-scanner found in PATH"
-                        }
-                        
-                        // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN environment variables
-                        // Access them via env object and pass explicitly to ensure they're used
-                        def sonarHostUrl = env.SONAR_HOST_URL ?: ''
-                        def sonarToken = env.SONAR_TOKEN ?: env.SONAR_LOGIN ?: ''
-                        
-                        echo "DEBUG: Checking SonarQube environment variables..."
-                        echo "DEBUG: SONAR_HOST_URL = ${sonarHostUrl ?: 'NOT SET'}"
-                        echo "DEBUG: SONAR_TOKEN = ${sonarToken ? 'SET (hidden)' : 'NOT SET'}"
-                        echo "DEBUG: SONAR_LOGIN = ${env.SONAR_LOGIN ? 'SET (hidden)' : 'NOT SET'}"
-                        
-                        if (!sonarToken) {
-                            error """SonarQube authentication token not found!
+                    // Explicitly bind the credential - try the credential ID that's shown in the dropdown
+                    withCredentials([string(credentialsId: 'SonarQube authentication token for Calculator project', variable: 'SONAR_TOKEN_EXPLICIT')]) {
+                        script {
+                            // Check if sonar-scanner exists in PATH
+                            def scannerExists = bat(
+                                script: 'where sonar-scanner >nul 2>&1',
+                                returnStatus: true
+                            ) == 0
                             
-Please ensure:
-1. Jenkins → Manage Jenkins → Configure System
-2. Find 'SonarQube servers' section
-3. Find server named 'Calculator'
-4. Set 'Server authentication token' dropdown to your token credential
-5. Click 'Save' and try again."""
+                            def scannerCmd = 'sonar-scanner'
+                            
+                            if (!scannerExists) {
+                                echo "⚠️ sonar-scanner not found in PATH. Setting up..."
+                                bat """
+                                    if not exist sonar-scanner (
+                                        echo Downloading SonarQube Scanner...
+                                        powershell -Command "& {Invoke-WebRequest -Uri 'https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-windows.zip' -OutFile 'sonar-scanner.zip'; Expand-Archive -Path 'sonar-scanner.zip' -DestinationPath '.' -Force}"
+                                        for /f "delims=" %%i in ('dir /b /ad sonar-scanner-* 2^>nul') do (
+                                            move "%%i" sonar-scanner
+                                        )
+                                        del sonar-scanner.zip 2>nul
+                                    )
+                                """
+                                scannerCmd = "${WORKSPACE}\\sonar-scanner\\bin\\sonar-scanner.bat"
+                            } else {
+                                echo "✅ sonar-scanner found in PATH"
+                            }
+                            
+                            // Get SonarQube server URL from withSonarQubeEnv
+                            def sonarHostUrl = env.SONAR_HOST_URL ?: 'http://localhost:9000'
+                            
+                            // Try multiple sources for the token
+                            def sonarToken = env.SONAR_TOKEN_EXPLICIT ?: env.SONAR_TOKEN ?: env.SONAR_LOGIN ?: ''
+                            
+                            echo "DEBUG: Checking SonarQube environment variables..."
+                            echo "DEBUG: SONAR_HOST_URL = ${sonarHostUrl}"
+                            echo "DEBUG: SONAR_TOKEN_EXPLICIT = ${env.SONAR_TOKEN_EXPLICIT ? 'SET (hidden)' : 'NOT SET'}"
+                            echo "DEBUG: SONAR_TOKEN = ${env.SONAR_TOKEN ? 'SET (hidden)' : 'NOT SET'}"
+                            echo "DEBUG: SONAR_LOGIN = ${env.SONAR_LOGIN ? 'SET (hidden)' : 'NOT SET'}"
+                            
+                            if (!sonarToken) {
+                                error """SonarQube authentication token not found!
+                                
+Please verify:
+1. The credential ID in Jenkins matches one of these:
+   - 'SonarQube authentication token for Calculator project'
+   - 'sonarqube-token-calculator'
+2. The credential type is 'Secret text'
+3. The credential contains your SonarQube token
+4. The SonarQube server 'Calculator' has this credential selected
+5. Save Jenkins configuration and restart Jenkins if needed"""
+                            }
+                            
+                            echo "✅ Using SonarQube server: ${sonarHostUrl}"
+                            
+                            // Run SonarQube analysis with explicit authentication
+                            bat """
+                                call %VENV_PATH%\\Scripts\\activate
+                                "${scannerCmd}" -Dproject.settings=animation-calculator\\sonar-project.properties -Dsonar.host.url=${sonarHostUrl} -Dsonar.token=${sonarToken}
+                            """
                         }
-                        
-                        echo "Using SonarQube server: ${sonarHostUrl}"
-                        
-                        // Run SonarQube analysis with explicit authentication
-                        bat """
-                            call %VENV_PATH%\\Scripts\\activate
-                            "${scannerCmd}" -Dproject.settings=animation-calculator\\sonar-project.properties -Dsonar.host.url=${sonarHostUrl} -Dsonar.token=${sonarToken}
-                        """
                     }
                 }
             }
