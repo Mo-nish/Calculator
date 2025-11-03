@@ -4,7 +4,7 @@ pipeline {
     environment {
         VENV_PATH = 'venv'
         SONARQUBE = 'Calculator' // Jenkins Sonar server name - must match Jenkins configuration
-        SONAR_TOKEN_CREDENTIAL_ID = 'SonarQube authentication token for Calculator project' // Credential ID for SonarQube token
+        SONAR_TOKEN_CREDENTIAL_ID = 'sonarqube-token-calculator' // Credential ID for SonarQube token
     }
 
     stages {
