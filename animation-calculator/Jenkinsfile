@@ -72,10 +72,21 @@ pipeline {
                             echo "✅ sonar-scanner found in PATH"
                         }
                         
-                        // Run SonarQube analysis
+                        // withSonarQubeEnv injects SONAR_HOST_URL and SONAR_TOKEN environment variables
+                        // Access them via env object and pass explicitly to ensure they're used
+                        def sonarHostUrl = env.SONAR_HOST_URL ?: ''
+                        def sonarToken = env.SONAR_TOKEN ?: env.SONAR_LOGIN ?: ''
+                        
+                        if (!sonarToken) {
+                            error "SonarQube authentication token not found. Please check SonarQube server configuration in Jenkins."
+                        }
+                        
+                        echo "Using SonarQube server: ${sonarHostUrl}"
+                        
+                        // Run SonarQube analysis with explicit authentication
                         bat """
                             call %VENV_PATH%\\Scripts\\activate
-                            "${scannerCmd}" -Dproject.settings=animation-calculator\\sonar-project.properties
+                            "${scannerCmd}" -Dproject.settings=animation-calculator\\sonar-project.properties -Dsonar.host.url=${sonarHostUrl} -Dsonar.token=${sonarToken}
                         """
                     }
                 }
