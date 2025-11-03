@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         VENV_PATH = 'venv'
-        SONARQUBE = 'SonarQube' // Jenkins Sonar server name (check Manage Jenkins → Configure System)
+        SONARQUBE = 'SonarQube' // Jenkins Sonar server name
     }
 
     stages {
@@ -26,16 +26,14 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh '''
-                echo "=== Activating virtual environment ==="
-                call venv\\Scripts\\activate
+                bat """
+                    echo === Activating virtual environment ===
+                    call %VENV_PATH%\\Scripts\\activate
 
-                echo "=== Running tests from correct directory ==="
-                pytest ./animation-calculator/backend/test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
-                '''
+                    echo === Running tests from correct directory ===
+                    pytest .\\animation-calculator\\backend\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
+                """
             }
-        }
-
             post {
                 always {
                     bat 'dir animation-calculator\\backend'
