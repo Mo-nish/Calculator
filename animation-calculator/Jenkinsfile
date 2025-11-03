@@ -31,7 +31,8 @@ pipeline {
                     call %VENV_PATH%\\Scripts\\activate
 
                     echo === Running tests from correct directory ===
-                    pytest .\\animation-calculator\\backend\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
+                    cd animation-calculator\\backend
+                    pytest test_app.py -v --maxfail=1 --disable-warnings --junitxml=..\\..\\test-results.xml
                 """
             }
             post {

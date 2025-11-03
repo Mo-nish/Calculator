@@ -35,6 +35,25 @@ A simple, animated calculator web application with a Flask backend and plain HTM
 
 ## Testing
 
+### Run Automated Tests with pytest
+
+From the project root directory:
+
+```bash
+# Activate virtual environment first
+.venv\Scripts\activate  # On Windows
+# OR
+source .venv/bin/activate  # On Mac/Linux
+
+# Run all tests
+pytest backend/test_app.py -v
+
+# Or just run pytest from project root
+pytest -v
+```
+
+This will run 16 comprehensive tests covering all calculator operations, error handling, and API endpoints.
+
 ### Test via UI
 Simply open `http://127.0.0.1:5000` in your browser and use the calculator form.
 
