@@ -24,15 +24,21 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Run Tests') {
             steps {
-                bat """
-                    call %VENV_PATH%\\Scripts\\activate
-                    pytest animation-calculator\\backend\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
-                """
+                sh '''
+                echo "=== Activating virtual environment ==="
+                call venv\\Scripts\\activate
+
+                echo "=== Running tests from correct directory ==="
+                pytest ./animation-calculator/backend/test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
+                '''
             }
+        }
+
             post {
                 always {
+                    bat 'dir animation-calculator\\backend'
                     junit 'test-results.xml'
                 }
             }
