@@ -46,10 +46,38 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE}") {
-                    bat """
-                        call %VENV_PATH%\\Scripts\\activate
-                        sonar-scanner -Dproject.settings=animation-calculator\\sonar-project.properties
-                    """
+                    script {
+                        // Check if sonar-scanner exists in PATH
+                        def scannerExists = bat(
+                            script: 'where sonar-scanner >nul 2>&1',
+                            returnStatus: true
+                        ) == 0
+                        
+                        def scannerCmd = 'sonar-scanner'
+                        
+                        if (!scannerExists) {
+                            echo "⚠️ sonar-scanner not found in PATH. Setting up..."
+                            bat """
+                                if not exist sonar-scanner (
+                                    echo Downloading SonarQube Scanner...
+                                    powershell -Command "& {Invoke-WebRequest -Uri 'https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-windows.zip' -OutFile 'sonar-scanner.zip'; Expand-Archive -Path 'sonar-scanner.zip' -DestinationPath '.' -Force}"
+                                    for /f "delims=" %%i in ('dir /b /ad sonar-scanner-* 2^>nul') do (
+                                        move "%%i" sonar-scanner
+                                    )
+                                    del sonar-scanner.zip 2>nul
+                                )
+                            """
+                            scannerCmd = "${WORKSPACE}\\sonar-scanner\\bin\\sonar-scanner.bat"
+                        } else {
+                            echo "✅ sonar-scanner found in PATH"
+                        }
+                        
+                        // Run SonarQube analysis
+                        bat """
+                            call %VENV_PATH%\\Scripts\\activate
+                            "${scannerCmd}" -Dproject.settings=animation-calculator\\sonar-project.properties
+                        """
+                    }
                 }
             }
         }
