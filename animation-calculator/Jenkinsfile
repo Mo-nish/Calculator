@@ -77,8 +77,20 @@ pipeline {
                         def sonarHostUrl = env.SONAR_HOST_URL ?: ''
                         def sonarToken = env.SONAR_TOKEN ?: env.SONAR_LOGIN ?: ''
                         
+                        echo "DEBUG: Checking SonarQube environment variables..."
+                        echo "DEBUG: SONAR_HOST_URL = ${sonarHostUrl ?: 'NOT SET'}"
+                        echo "DEBUG: SONAR_TOKEN = ${sonarToken ? 'SET (hidden)' : 'NOT SET'}"
+                        echo "DEBUG: SONAR_LOGIN = ${env.SONAR_LOGIN ? 'SET (hidden)' : 'NOT SET'}"
+                        
                         if (!sonarToken) {
-                            error "SonarQube authentication token not found. Please check SonarQube server configuration in Jenkins."
+                            error """SonarQube authentication token not found!
+                            
+Please ensure:
+1. Jenkins → Manage Jenkins → Configure System
+2. Find 'SonarQube servers' section
+3. Find server named 'Calculator'
+4. Set 'Server authentication token' dropdown to your token credential
+5. Click 'Save' and try again."""
                         }
                         
                         echo "Using SonarQube server: ${sonarHostUrl}"
