@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         VENV_PATH = 'venv'
-        SONARQUBE = 'Invensis' // Jenkins Sonar server name - must match Jenkins configuration
+        SONARQUBE = 'Calculator' // Jenkins Sonar server name - must match Jenkins configuration
     }
 
     stages {
