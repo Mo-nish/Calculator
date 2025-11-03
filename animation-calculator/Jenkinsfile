@@ -31,12 +31,12 @@ pipeline {
                     call %VENV_PATH%\\Scripts\\activate
 
                     echo === Running tests from correct directory ===
-                    pytest .\\animation-calculator\\backend\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
+                    pytest .\\animation-calculator\\tests\\test_app.py -v --maxfail=1 --disable-warnings --junitxml=test-results.xml
                 """
             }
             post {
                 always {
-                    bat 'dir animation-calculator\\backend'
+                    bat 'dir animation-calculator\\tests'
                     junit 'test-results.xml'
                 }
             }
