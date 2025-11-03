@@ -4,6 +4,7 @@ pipeline {
     environment {
         VENV_PATH = 'venv'
         SONARQUBE = 'Calculator' // Jenkins Sonar server name - must match Jenkins configuration
+        SONAR_TOKEN_CREDENTIAL_ID = 'SonarQube authentication token for Calculator project' // Credential ID for SonarQube token
     }
 
     stages {
@@ -46,8 +47,8 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE}") {
-                    // Explicitly bind the credential - try the credential ID that's shown in the dropdown
-                    withCredentials([string(credentialsId: 'SonarQube authentication token for Calculator project', variable: 'SONAR_TOKEN_EXPLICIT')]) {
+                    // Explicitly bind the credential using the credential ID from environment
+                    withCredentials([string(credentialsId: "${SONAR_TOKEN_CREDENTIAL_ID}", variable: 'SONAR_TOKEN_EXPLICIT')]) {
                         script {
                             // Check if sonar-scanner exists in PATH
                             def scannerExists = bat(
