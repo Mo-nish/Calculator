@@ -63,7 +63,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat '''
-                echo === Running Unit Tests ===
+                echo "=== Running Unit Tests ==="
                 pytest --maxfail=1 --disable-warnings -q
                 '''
             }
