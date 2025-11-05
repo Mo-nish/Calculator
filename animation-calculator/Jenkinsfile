@@ -13,7 +13,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE}") {
-                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'sonarqube-token-calculator', variable: 'SONAR_TOKEN')]) {
                         bat '''
                         echo === Running SonarQube analysis ===
                         sonar-scanner ^
