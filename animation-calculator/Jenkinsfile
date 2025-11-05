@@ -68,7 +68,7 @@ pipeline {
             steps {
                 bat '''
                 echo === Building Docker Image ===
-                docker build -t %DOCKER_REGISTRY%/%IMAGE_NAME%:latest animation-calculator
+                docker build -t %DOCKER_REGISTRY%/%IMAGE_NAME%:latest backend
                 '''
             }
         }
