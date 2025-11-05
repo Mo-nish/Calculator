@@ -9,11 +9,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Source') {
-            steps {
-                git 'https://github.com/Mo-nish/Calculator.git'
-            }
-        }
 
         stage('SonarQube Analysis') {
             steps {
