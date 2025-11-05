@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // === Global Variables ===
         DOCKER_REGISTRY = "localhost:5000"
         IMAGE_NAME = "calculator-app"
         CONTAINER_NAME = "calculator-container"
@@ -23,13 +22,11 @@ pipeline {
                           -Dsonar.host.url=http://localhost:9000 ^
                           -Dsonar.token=%SONAR_TOKEN%
                         '''
-                        '''
                     }
                 }
             }
         }
 
-        // 🕒 Give SonarQube CE time to process report
         stage('Wait for SonarQube Processing') {
             steps {
                 echo "⏳ Waiting 30 seconds for SonarQube to finish background analysis..."
@@ -37,7 +34,6 @@ pipeline {
             }
         }
 
-        // ✅ Quality Gate Check
         stage('Quality Gate Check') {
             steps {
                 script {
@@ -59,17 +55,15 @@ pipeline {
             }
         }
 
-        // 🧪 Run Python Tests
         stage('Run Tests') {
             steps {
                 bat '''
-                echo "=== Running Unit Tests ==="
+                echo === Running Unit Tests ===
                 pytest --maxfail=1 --disable-warnings -q
                 '''
             }
         }
 
-        // 🏗️ Build Docker Image
         stage('Build Docker Image') {
             steps {
                 bat '''
@@ -79,7 +73,6 @@ pipeline {
             }
         }
 
-        // 🔐 Login to Nexus Docker Registry
         stage('Login to Nexus Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-docker', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
@@ -91,7 +84,6 @@ pipeline {
             }
         }
 
-        // 📦 Push Image to Nexus
         stage('Push Image to Nexus') {
             steps {
                 bat '''
@@ -101,7 +93,6 @@ pipeline {
             }
         }
 
-        // 🚀 Deploy Locally
         stage('Deploy Locally') {
             steps {
                 bat '''
