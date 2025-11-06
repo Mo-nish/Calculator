@@ -4,7 +4,7 @@ pipeline {
     environment {
         SONARQUBE = 'Calculator'
         DOCKER_IMAGE = 'localhost:5000/calculator-app:latest'
-        APP_PATH = 'backend'
+        APP_PATH = 'animation-calculator/backend'
     }
 
     stages {
