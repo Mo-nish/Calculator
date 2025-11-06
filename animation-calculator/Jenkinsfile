@@ -82,10 +82,19 @@ pipeline {
         stage('Archive Desktop Executable') {
             steps {
                 echo '📦 Archiving .exe artifact...'
-                archiveArtifacts artifacts: '%APP_PATH%/dist/AnimationCalculator.exe', fingerprint: true
+                archiveArtifacts artifacts: "${env.APP_PATH}/dist/AnimationCalculator.exe", fingerprint: true
             }
         }
 
+        stage('Copy to Local Folder') {
+            steps {
+                bat """
+                echo === Copying .exe to local build folder ===
+                mkdir "C:\\DesktopApps\\Builds"
+                copy "%APP_PATH%\\dist\\AnimationCalculator.exe" "C:\\DesktopApps\\Builds\\AnimationCalculator.exe" /Y
+                """
+            }
+        }
     }
 
     post {
