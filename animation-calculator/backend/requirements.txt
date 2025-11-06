@@ -2,3 +2,5 @@ Flask
 flask-cors
 pytest
 pytest-cov
+PyQt5
+PyQtWebEngine
