@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SONARQUBE = 'Calculator'
-        DOCKER_IMAGE = 'localhost:5000/calculator-app:latest'
+        DOCKER_IMAGE = 'calculator-app:latest'   // simplified for local Docker
         APP_PATH = 'animation-calculator/backend'
     }
 
@@ -95,14 +95,48 @@ pipeline {
                 """
             }
         }
+
+        // 🐳 -------------------------------
+        // Added Docker Build + Verification
+        // -------------------------------
+
+        stage('Build Docker Image Locally') {
+            steps {
+                echo '🐳 Building local Docker image...'
+                bat """
+                    cd %APP_PATH%
+                    docker build -t %DOCKER_IMAGE% .
+                """
+            }
+        }
+
+        stage('Verify Docker Image') {
+            steps {
+                echo '🔍 Verifying Docker image...'
+                bat """
+                    docker images %DOCKER_IMAGE%
+                """
+            }
+        }
+
+        stage('Run Docker Container (Smoke Test)') {
+            steps {
+                echo '🚀 Running container for verification...'
+                bat """
+                    docker stop calculator-test || echo "No container to stop"
+                    docker rm calculator-test || echo "No container to remove"
+                    docker run -d --name calculator-test -p 5000:5000 %DOCKER_IMAGE%
+                """
+            }
+        }
     }
 
     post {
         success {
-            echo '✅ Desktop application built successfully!'
+            echo '✅ Desktop application and Docker image built successfully!'
         }
         failure {
-            echo '❌ Desktop build failed. Check stage logs.'
+            echo '❌ Build failed. Check Jenkins logs for details.'
         }
     }
 }
