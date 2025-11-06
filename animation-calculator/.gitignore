@@ -40,6 +40,8 @@ npm-debug.log
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
+test-results.xml
 
 # Distribution
 dist/
