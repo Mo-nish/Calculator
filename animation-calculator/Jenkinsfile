@@ -3,7 +3,8 @@ pipeline {
 
     environment {
         SONARQUBE = 'Calculator'
-        DOCKER_IMAGE = 'calculator-app:latest'   // simplified for local Docker
+        DOCKER_IMAGE = 'calculator-app:latest'
+        NEXUS_REPO = 'localhost:8082'
         APP_PATH = 'animation-calculator/backend'
     }
 
@@ -21,7 +22,7 @@ pipeline {
                 withSonarQubeEnv("${SONARQUBE}") {
                     withCredentials([string(credentialsId: 'sonarqube-token-calculator', variable: 'SONAR_TOKEN')]) {
                         bat '''
-                        echo === Running SonarQube Analysis for Desktop App ===
+                        echo === Running SonarQube Analysis ===
                         sonar-scanner ^
                           -Dsonar.projectKey=Calculator ^
                           -Dsonar.sources=. ^
@@ -96,10 +97,6 @@ pipeline {
             }
         }
 
-        // 🐳 -------------------------------
-        // Added Docker Build + Verification
-        // -------------------------------
-
         stage('Build Docker Image Locally') {
             steps {
                 echo '🐳 Building local Docker image...'
@@ -110,22 +107,21 @@ pipeline {
             }
         }
 
-        stage('Verify Docker Image') {
+        stage('Tag & Push to Nexus') {
             steps {
-                echo '🔍 Verifying Docker image...'
+                echo '🚀 Tagging and pushing Docker image to Nexus registry...'
                 bat """
-                    docker images %DOCKER_IMAGE%
+                    docker tag %DOCKER_IMAGE% %NEXUS_REPO%/%DOCKER_IMAGE%
+                    docker push %NEXUS_REPO%/%DOCKER_IMAGE%
                 """
             }
         }
 
-        stage('Run Docker Container (Smoke Test)') {
+        stage('Verify Nexus Image') {
             steps {
-                echo '🚀 Running container for verification...'
+                echo '🔍 Verifying pushed image...'
                 bat """
-                    docker stop calculator-test || echo "No container to stop"
-                    docker rm calculator-test || echo "No container to remove"
-                    docker run -d --name calculator-test -p 5000:5000 %DOCKER_IMAGE%
+                    curl http://%NEXUS_REPO%/v2/calculator-app/tags/list
                 """
             }
         }
@@ -133,10 +129,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Desktop application and Docker image built successfully!'
+            echo '✅ Desktop app built and Docker image pushed to Nexus successfully!'
         }
         failure {
-            echo '❌ Build failed. Check Jenkins logs for details.'
+            echo '❌ Build failed. Check Jenkins logs for stage details.'
         }
     }
 }
