@@ -2,116 +2,101 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REGISTRY = "localhost:5000"
-        IMAGE_NAME = "calculator-app"
-        CONTAINER_NAME = "calculator-container"
-        SONARQUBE = "Calculator"
+        SONARQUBE = 'Calculator'
+        DOCKER_IMAGE = 'localhost:5000/calculator-app:latest'
+        APP_PATH = 'backend'
     }
 
     stages {
 
+        stage('Checkout') {
+            steps {
+                echo '📥 Checking out code...'
+                git branch: 'main', credentialsId: 'github-pat', url: 'https://github.com/Mo-nish/Calculator.git'
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE}") {
-                    withCredentials([string(credentialsId: 'sonarqube-token-calculator', variable: 'SONAR_TOKEN')]) {
-                        bat '''
-                        echo === Running SonarQube Analysis ===
-                        sonar-scanner ^
-                          -Dsonar.projectKey=Calculator ^
-                          -Dsonar.sources=. ^
-                          -Dsonar.host.url=http://localhost:9000 ^
-                          -Dsonar.token=%SONAR_TOKEN%
-                        '''
-                    }
+                withSonarQubeEnv('Calculator') {
+                    bat """
+                    sonar-scanner ^
+                        -Dsonar.projectKey=Calculator ^
+                        -Dsonar.sources=. ^
+                        -Dsonar.host.url=http://localhost:9000 ^
+                        -Dsonar.token=%SONAR_TOKEN%
+                    """
                 }
             }
         }
 
-        stage('Wait for SonarQube Processing') {
+        stage('Quality Gate') {
             steps {
-                echo "⏳ Waiting 30 seconds for SonarQube to finish background analysis..."
-                sleep(time: 30, unit: 'SECONDS')
-            }
-        }
-
-        stage('Quality Gate Check') {
-            steps {
-                script {
-                    try {
-                        timeout(time: 10, unit: 'MINUTES') {
-                            def qg = waitForQualityGate()
-                            echo "Quality Gate Status: ${qg.status}"
-
-                            if (qg.status != 'OK') {
-                                error "❌ Quality Gate failed with status: ${qg.status}"
-                            } else {
-                                echo "✅ Quality Gate passed successfully."
-                            }
+                timeout(time: 10, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "🚫 Quality Gate failed: ${qg.status}"
                         }
-                    } catch (err) {
-                        echo "⚠️ Quality Gate check skipped or timed out. Proceeding..."
                     }
                 }
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Unit Tests') {
             steps {
-                bat '''
-                echo === Running Unit Tests ===
-                pytest --maxfail=1 --disable-warnings -q
-                '''
+                echo '🧪 Running Python unit tests...'
+                bat """
+                    cd %APP_PATH%
+                    pytest --maxfail=1 --disable-warnings -q
+                """
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Web Docker Image') {
             steps {
-                bat '''
-                echo === Building Docker Image ===
-                docker build -t %DOCKER_REGISTRY%/%IMAGE_NAME%:latest animation-calculator/backend
-                '''
+                echo '🐳 Building Flask Docker image...'
+                bat """
+                    docker build -t %DOCKER_IMAGE% %APP_PATH%
+                """
             }
         }
 
-        stage('Login to Nexus Registry') {
+        stage('Verify Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-docker', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    bat '''
-                    echo === Logging in to Nexus ===
-                    docker login %DOCKER_REGISTRY% -u %USER% -p %PASS%
-                    '''
-                }
+                bat """
+                    echo === Verifying built image ===
+                    docker images %DOCKER_IMAGE%
+                """
             }
         }
 
-        stage('Push Image to Nexus') {
+        stage('Build Desktop Executable') {
             steps {
-                bat '''
-                echo === Pushing Image to Nexus ===
-                docker push %DOCKER_REGISTRY%/%IMAGE_NAME%:latest
-                '''
+                echo '💻 Packaging desktop version...'
+                bat """
+                    cd %APP_PATH%
+                    pip install pyinstaller
+                    pyinstaller --onefile --noconsole desktop_app.py --name AnimationCalculator
+                """
             }
         }
 
-        stage('Deploy Locally') {
+        stage('Archive Desktop Executable') {
             steps {
-                bat '''
-                echo === Deploying Docker Container ===
-                docker stop %CONTAINER_NAME% || echo "No old container found"
-                docker rm %CONTAINER_NAME% || echo "No old container to remove"
-                docker pull %DOCKER_REGISTRY%/%IMAGE_NAME%:latest
-                docker run -d --name %CONTAINER_NAME% -p 8082:5000 %DOCKER_REGISTRY%/%IMAGE_NAME%:latest
-                '''
+                echo '📦 Archiving .exe artifact...'
+                archiveArtifacts artifacts: '%APP_PATH%/dist/AnimationCalculator.exe', fingerprint: true
             }
         }
+
     }
 
     post {
         success {
-            echo "🚀 Deployment Successful! App available at: http://localhost:8082"
+            echo '✅ All builds completed successfully — Web + Desktop versions ready!'
         }
         failure {
-            echo "❌ Build or Deployment Failed. Check Jenkins logs for details."
+            echo '❌ Build failed. Check stage logs.'
         }
     }
 }
